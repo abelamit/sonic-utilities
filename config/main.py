@@ -5871,7 +5871,6 @@ def frequency(ctx, interface_name, frequency):
 
     clicommon.run_command(command)
 
-
 #
 # 'tx_power' subcommand ('config interface transceiver tx_power ...')
 # For negative float use:-
@@ -7157,8 +7156,54 @@ def remove_vrrp_v6(ctx, interface_name, vrrp_id):
 
 
 #
-# 'vrf' group ('config vrf ...')
+# 'tx_error_status' command ("config tx_tx_error_status")
 #
+@config.group(cls=clicommon.AbbreviationGroup, name='tx_error_status')
+@click.pass_context
+def tx_error_status():
+    config_db = ConfigDBConnector()
+    config_db.connect()
+    ctx.obj = {}
+    ctx.obj['config_db'] = config_db
+
+@tx_error_status.command('set')
+@click.argument('threshold', type=int, required=False)
+@click.argument('time_period', type=int, required=False)
+@click.pass_context
+def set_tx_error_status(ctx, threshold, time_period):
+    """Configure Tx error status threshold and/or time period"""
+    if threshold is None and time_period is None:
+        ctx.fail("Please provide either threshold or time period")
+
+    config_db = ValidatedConfigDBConnector(ctx.obj['config_db'])
+
+    if threshold is not None:
+        if threshold < 0:
+            ctx.fail("Invalid threshold {}. Only valid threshold is accepted".format(threshold))
+        config_db.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'threshold': threshold})
+
+    if time_period is not None:
+        if time_period < 0:
+            ctx.fail("Invalid time period {}. Only valid time period is accepted".format(time_period))
+        config_db.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'time_period': time_period})
+
+
+@tx_error_status.command('del')
+@click.argument('threshold', type=bool, required=False)
+@click.argument('time_period', type=bool, required=False)
+@click.pass_context
+def del_tx_error_status(ctx, vrf_name):
+    """Delete configured Tx error status threshold and/or time period"""
+    if threshold is None and time_period is None:
+        ctx.fail("Please provide either threshold or time period")
+
+    config_db = ValidatedConfigDBConnector(ctx.obj['config_db'])
+
+    if threshold is not None and threshold is True:
+        config_db.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'threshold': None})
+
+    if time_period is not None and time_period is True:
+        config_db.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'time_period': None})
 
 @config.group(cls=clicommon.AbbreviationGroup, name='vrf')
 @click.pass_context

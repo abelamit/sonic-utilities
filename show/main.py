@@ -405,6 +405,22 @@ def event_counters():
     else:
         click.echo('No data available in COUNTERS_EVENTS\n')
 
+#
+# 'tx_error_status' command ("show tx_tx_error_status")
+#
+@cli.command()
+@clicommon.pass_db
+@click.argument('port', required=True)
+def tx_error_status(db, port):
+    """Show details of the Tx error port status"""
+
+    full_table_id = "PORT_TABLE|" + port
+    port_state = db.get(db.db.STATE_DB, full_table_id, 'tx_error_port_state')
+
+    if port_state is None:
+        click.echo('No data available in Port table state for port: {}\n'.format(port))
+
+    click.echo('State of Port {} is {}'.format(port, port_state))
 
 #
 # 'arp' command ("show arp")
