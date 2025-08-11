@@ -5871,7 +5871,6 @@ def frequency(ctx, interface_name, frequency):
 
     clicommon.run_command(command)
 
-
 #
 # 'tx_power' subcommand ('config interface transceiver tx_power ...')
 # For negative float use:-
@@ -7157,8 +7156,49 @@ def remove_vrrp_v6(ctx, interface_name, vrrp_id):
 
 
 #
-# 'vrf' group ('config vrf ...')
+# 'tx_error_status' command ("config tx_tx_error_status")
 #
+@config.group(cls=clicommon.AbbreviationGroup, name='tx_error_status')
+def tx_error_status():
+    pass
+    
+
+@tx_error_status.command('set')
+@click.option('-t', '--threshold', type=click.IntRange(min=1),
+              help='Configure threshold for Tx error state - for all ports')
+@click.option('-p', '--period', type=click.IntRange(min=1),
+              help='Configure time period for Tx error state - for all ports')
+@clicommon.pass_db
+@click.pass_context
+def set_tx_error_status(ctx, db ,threshold, period):
+    """Configure Tx error status threshold and/or time period"""
+    if threshold is None and period is None:
+        ctx.fail("Please provide either threshold or time period")
+    
+    if threshold is not None:
+        db.cfgdb.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'threshold': threshold})
+
+    if period is not None:
+        db.cfgdb.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'time_period': period})
+
+
+@tx_error_status.command('del')
+@click.option('-t', '--threshold', type=bool,
+              help='Is delete threshold for Tx error state - for all ports')
+@click.option('-p', '--period', type=bool,
+              help='Is delete time period for Tx error state - for all ports')
+@clicommon.pass_db 
+@click.pass_context
+def del_tx_error_status(ctx, db, threshold, period):
+    """Delete configured Tx error status threshold and/or time period"""
+    if threshold is None and period is None:
+        ctx.fail("Please provide either threshold or time period")
+
+    if threshold is not None and threshold is True:
+        db.cfgdb.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'threshold': None})
+
+    if period is not None and period is True:
+        db.cfgdb.mod_entry('TX_ERROR_CHECK_TABLE', 'TX_ERROR_CHECK', {'time_period': None})
 
 @config.group(cls=clicommon.AbbreviationGroup, name='vrf')
 @click.pass_context
