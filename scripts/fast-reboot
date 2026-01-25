@@ -336,6 +336,12 @@ function filter_asic_list()
     fi
 }
 
+function clear_fast_boot_table()
+{
+    #update FAST_RESTART_ENABLE_TABLE to false
+    sonic-db-cli -n "$NETNS" STATE_DB HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null || /bin/true
+}
+
 function clear_boot()
 {
     # common_clear
@@ -361,10 +367,7 @@ function clear_boot()
         fi
     done
 
-    #clear_fast_boot
-    if [[ "$REBOOT_TYPE" = "fast-reboot" ]]; then
-        sonic-db-cli STATE_DB HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null || /bin/true
-    fi
+    execute_in_namespaces all clear_fast_boot_table
 }
 
 function init_warm_reboot_states()
@@ -935,16 +938,20 @@ fi
 
 check_conflict_boot_in_fw_update
 
+function enable_fast_boot()
+{
+    sonic-db-cli -n "$NETNS" STATE_DB HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "true" &>/dev/null || /bin/true
+    config warm_restart enable -n "$NETNS" system
+}
 
 # Check reboot type supported
 BOOT_TYPE_ARG="cold"
 case "$REBOOT_TYPE" in
     "fast-reboot")
-        check_warm_restart_in_progress
+        execute_in_namespaces all check_warm_restart_in_progress
         BOOT_TYPE_ARG=$REBOOT_TYPE
         trap clear_boot EXIT HUP INT QUIT TERM KILL ABRT ALRM
-        sonic-db-cli STATE_DB HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "true" &>/dev/null
-        config warm_restart enable system
+        execute_in_namespaces all enable_fast_boot
         ;;
     "warm-reboot")
         execute_in_namespaces all check_warm_restart_in_progress
@@ -1134,16 +1141,23 @@ fi
 # service will go down and we cannot recover from it.
 set +e
 
-if [[ "$REBOOT_TYPE" = "fast-reboot" ]]; then
-    # Clear all routes except of default and connected routes for faster reconciliation time.
+
+function filter_routes()
+{
     debug "Clearing routes..."
     FILTER_ROUTES=0
-    python /usr/local/bin/fast-reboot-filter-routes.py || FILTER_ROUTES=$?
-    if [[ FILTER_ROUTES -ne 0 ]]; then
+    NAMESPACE_ARG=""
+    python /usr/local/bin/fast-reboot-filter-routes.py -n $NETNS || FILTER_ROUTES=$?
+    if [[ $FILTER_ROUTES -ne 0 ]]; then
         error "Preserving connected and default routes failed."
     else
         debug "Routes deleted from APP-DB, default and connected routes preserved."
     fi
+}
+
+if [[ "$REBOOT_TYPE" = "fast-reboot" ]]; then
+    # Clear all routes except of default and connected routes for faster reconciliation time.
+    execute_in_namespaces asic filter_routes
 fi
 
 # disable trap-handlers which were set before
