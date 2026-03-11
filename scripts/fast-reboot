@@ -131,7 +131,7 @@ function execute_in_namespaces()
             wait "$pid" && rc=0 || rc=$?
             # If the command failed, remove the ASIC from the list
             if [[ $rc -ne 0 ]]; then
-                error "Command $cmd failed for $dev returned $rc"
+                error "Command $cmd failed for asic$dev returned $rc"
                 if [[ $FORCE == "no" ]]; then
                     exit $rc
                 else
@@ -139,7 +139,7 @@ function execute_in_namespaces()
                     # Remove failed ASIC from the list
                     ASIC_LIST=(${ASIC_LIST[@]/$dev})
                     # Disable fast/warm-reboot for the failed ASIC
-                    sonic-db-cli -n "asic$dev" HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null || /bin/true
+                    sonic-db-cli -n "asic$dev" STATE_DB HSET "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null || /bin/true
                     config warm_restart disable system -n "asic$dev" &>/dev/null || /bin/true
                 fi
             fi
@@ -1114,7 +1114,7 @@ function pause_orchagent()
     docker exec -i swss$DEV /usr/bin/orchagent_restart_check -w 2000 -r 5 > /dev/null || RESTARTCHECK_RC=$?
     if [[ RESTARTCHECK_RC -ne 0 ]]; then
         error "RESTARTCHECK failed"
-        if [[ x"${FORCE}" == x"yes" ]]; then
+        if [[ x"${FORCE}" == x"yes" && $NUM_ASIC -eq 1 ]]; then
             debug "Ignoring orchagent pausing failure ..."
         else
             exit "${EXIT_ORCHAGENT_SHUTDOWN}"
