@@ -318,7 +318,11 @@ function filter_asic_list()
         for asic in "${ASIC_LIST[@]}"; do
             local skip=0
             for skip_asic in "${SKIP_ASICS[@]}"; do
-                if [[ $asic -eq $skip_asic ]]; then
+                if [[ ! " ${ASIC_LIST[@]} " =~ " ${skip_asic} " ]]; then
+                    error "Invalid ASIC number to skip: ${skip_asic}, valid ASIC numbers are: ${ASIC_LIST[@]}"
+                    exit "${EXIT_FAILURE}"
+                fi
+                if [[ "$asic" == "$skip_asic" ]]; then
                     skip=1
                     break
                 fi
