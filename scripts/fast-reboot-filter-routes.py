@@ -12,6 +12,7 @@ from sonic_py_common import multi_asic
 
 ROUTE_IDX = 1
 
+
 def get_connected_routes(namespace):
     if namespace:
         ns_name = multi_asic.get_asic_id_from_name(namespace)
@@ -29,6 +30,7 @@ def get_connected_routes(namespace):
 
     return connected_routes
 
+
 def get_route(db, route):
     key = 'ROUTE_TABLE:%s' % route
     val = db.keys(db.APPL_DB, key)
@@ -36,6 +38,7 @@ def get_route(db, route):
         return val[0].split(":", 1)[ROUTE_IDX]
     else:
         return None
+
 
 def generate_default_route_entries(namespace):
     db = ConfigDBConnector(namespace=namespace)
@@ -65,6 +68,7 @@ def filter_routes(namespace, preserved_routes):
         if stripped_route not in preserved_routes:
             db.delete(db.APPL_DB, route)
 
+
 def main():
     parser = argparse.ArgumentParser(description='Filter routes for fast-reboot')
     parser.add_argument('-n', '--namespace', default=multi_asic.DEFAULT_NAMESPACE,
@@ -81,6 +85,7 @@ def main():
     preserved_routes = set(default_routes + connected_routes)
     filter_routes(namespace, preserved_routes)
     return 0
+
 
 if __name__ == '__main__':
     res = 0
