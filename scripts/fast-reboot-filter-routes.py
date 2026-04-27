@@ -56,6 +56,7 @@ def generate_default_route_entries(namespace):
 
     return default_routes
 
+
 def filter_routes(namespace, preserved_routes):
     db = ConfigDBConnector(namespace=namespace)
     db.db_connect(db.APPL_DB)
